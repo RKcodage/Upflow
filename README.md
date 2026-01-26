@@ -1,4 +1,4 @@
-<img width="1728" height="995" alt="Capture d’écran 2025-12-30 à 09 12 00" src="https://github.com/user-attachments/assets/1d51b19c-7f62-4597-aec8-d6e4b92eb7e6" />
+<img src="public/images/demo-upflow.png" width="1728" alt="UpFlow Démo" />
 
 ## Getting Started
 
