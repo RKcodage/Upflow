@@ -64,22 +64,20 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
-    const session = getSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const projectIdParam = searchParams.get("projectId");
     const projectId = projectIdParam && projectIdParam.trim() ? projectIdParam.trim() : "";
     if (!projectId) {
       return NextResponse.json({ error: "Missing projectId." }, { status: 400 });
     }
+    const projectKey = searchParams.get("projectKey");
     const siteOrigin = searchParams.get("siteOrigin");
 
-    const auth = await verifyProjectAccess(projectId, null, null, {
-      isAdmin: request.headers.get("x-upflow-admin") === "1",
-      userId: session.sub,
+    const session = getSessionFromRequest(request);
+    const isAdmin = Boolean(session && request.headers.get("x-upflow-admin") === "1");
+    const auth = await verifyProjectAccess(projectId, projectKey || null, siteOrigin || null, {
+      isAdmin,
+      userId: session?.sub,
       requestOrigin: request.headers.get("origin"),
       requestReferer: request.headers.get("referer"),
       apiOrigin: request.nextUrl.origin,

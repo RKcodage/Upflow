@@ -279,6 +279,8 @@ export default function Home() {
       }
 
       const params = new URLSearchParams({ projectId: activeProjectId });
+      if (siteOrigin) params.set("siteOrigin", siteOrigin);
+      if (projectKey) params.set("projectKey", projectKey);
       if (activeProjectKey) params.set("projectKey", activeProjectKey);
       if (activeSiteOrigin) params.set("siteOrigin", activeSiteOrigin);
 
@@ -361,7 +363,7 @@ export default function Home() {
     };
     window.addEventListener("upflow:widget-check", handler);
     return () => window.removeEventListener("upflow:widget-check", handler);
-  }, [isAuthed, projectId]);
+  }, [isAuthed, projectId, projectKey, siteOrigin]);
 
   useEffect(() => {
     if (!isAuthed || !projectId) {
@@ -369,7 +371,7 @@ export default function Home() {
       return;
     }
     void loadWidgetStatus(projectId);
-  }, [isAuthed, projectId]);
+  }, [isAuthed, projectId, projectKey, siteOrigin]);
 
   useEffect(() => {
     if (!isAuthed || !projectId) return;
@@ -377,7 +379,7 @@ export default function Home() {
       void loadWidgetStatus(projectId);
     }, 20000);
     return () => window.clearInterval(interval);
-  }, [isAuthed, projectId]);
+  }, [isAuthed, projectId, projectKey, siteOrigin]);
 
   const handleVote = async (featureId: string, voteType: "up" | "down") => {
     if (!visitorId) return;
