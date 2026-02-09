@@ -25,7 +25,7 @@
   --color-danger-bg: rgba(255, 107, 107, 0.12);
 
   /* Font */
-  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Reset */
@@ -260,6 +260,12 @@ body {
   background: var(--color-success-bg);
   border-color: var(--color-success);
   color: var(--color-success);
+}
+
+.toast-error {
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
 }
 
 /* Components */

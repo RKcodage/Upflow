@@ -1,14 +1,16 @@
 "use client";
 
-import { ChevronUp, ChevronDown, MessageCircle, Calendar, User } from "lucide-react";
+import { ChevronUp, ChevronDown, MessageCircle, Calendar, User, Trash2 } from "lucide-react";
 import type { Feature } from "../page";
 
 interface FeatureCardProps {
   feature: Feature;
   onVote: (featureId: string, voteType: "up" | "down") => void;
+  onStatusChange: (featureId: string, status: Feature["status"]) => void;
+  onDelete: (feature: Feature) => void;
 }
 
-export default function FeatureCard({ feature, onVote }: FeatureCardProps) {
+export default function FeatureCard({ feature, onVote, onStatusChange, onDelete }: FeatureCardProps) {
   const getStatusBadgeClass = (status: Feature["status"]) => {
     switch (status) {
       case "planned":
@@ -99,8 +101,48 @@ export default function FeatureCard({ feature, onVote }: FeatureCardProps) {
               {feature.title}
             </h3>
             
-            <div className={`badge ${getStatusBadgeClass(feature.status)}`} style={{ padding: "4px 10px" }}>
-              {getStatusLabel(feature.status)}
+            <div className="flex items-center" style={{ gap: "8px" }}>
+              <div className={`badge ${getStatusBadgeClass(feature.status)}`} style={{ padding: "4px 10px" }}>
+                {getStatusLabel(feature.status)}
+              </div>
+              <div style={{ position: "relative", width: "160px" }}>
+                <select
+                  className="select"
+                  value={feature.status}
+                  onChange={(event) => onStatusChange(feature.id, event.target.value as Feature["status"])}
+                  style={{
+                    padding: "4px 28px 4px 8px",
+                    fontSize: "12px",
+                    height: "28px",
+                    width: "100%",
+                    appearance: "none",
+                  }}
+                >
+                  <option value="under-review">En révision</option>
+                  <option value="planned">Planifié</option>
+                  <option value="in-progress">En cours</option>
+                  <option value="completed">Terminé</option>
+                </select>
+                <ChevronDown
+                  size={14}
+                  style={{
+                    position: "absolute",
+                    right: "8px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    pointerEvents: "none",
+                    color: "var(--color-muted)",
+                  }}
+                />
+              </div>
+              <button
+                className="btn-icon"
+                style={{ width: "28px", height: "28px", color: "var(--color-danger)" }}
+                onClick={() => onDelete(feature)}
+                aria-label="Supprimer la demande"
+              >
+                <Trash2 size={14} />
+              </button>
             </div>
           </div>
 

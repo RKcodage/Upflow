@@ -10,6 +10,8 @@ interface FeatureListProps {
   sortBy: "votes" | "recent";
   onSortChange: (sort: "votes" | "recent") => void;
   onVote: (featureId: string, voteType: "up" | "down") => void;
+  onStatusChange: (featureId: string, status: Feature["status"]) => void;
+  onDelete: (feature: Feature) => void;
 }
 
 export default function FeatureList({
@@ -18,6 +20,8 @@ export default function FeatureList({
   sortBy,
   onSortChange,
   onVote,
+  onStatusChange,
+  onDelete,
 }: FeatureListProps) {
   // Filter features
   const filteredFeatures = features.filter((feature) => {
@@ -73,7 +77,7 @@ export default function FeatureList({
           </div>
 
           <button
-            className="btn-secondary flex items-center"
+            className="btn-secondary flex items-center cursor-pointer"
             style={{ padding: "10px 16px", gap: "8px" }}
             onClick={() => onSortChange(sortBy === "votes" ? "recent" : "votes")}
           >
@@ -97,6 +101,8 @@ export default function FeatureList({
               key={feature.id}
               feature={feature}
               onVote={onVote}
+              onStatusChange={onStatusChange}
+              onDelete={onDelete}
             />
           ))}
 

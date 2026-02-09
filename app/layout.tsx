@@ -1,11 +1,5 @@
 import type { Metadata } from "next";
-import { Outfit } from "next/font/google";
 import "./globals.css";
-
-const outfit = Outfit({
-  subsets: ["latin"],
-  variable: "--font-outfit",
-});
 
 export const metadata: Metadata = {
   title: "UpFlow - Gestion des demandes de fonctionnalités",
@@ -19,7 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body className={outfit.variable}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

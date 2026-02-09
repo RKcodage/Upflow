@@ -3,8 +3,19 @@
 import { useState } from "react";
 import { User, Settings, CreditCard, LogOut } from "lucide-react";
 
-export default function UserMenu() {
+type UserInfo = {
+  id: string;
+  email: string;
+};
+
+interface UserMenuProps {
+  user: UserInfo;
+  onLogout: () => void;
+}
+
+export default function UserMenu({ user, onLogout }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const initials = user.email ? user.email.slice(0, 2).toUpperCase() : "U";
 
   return (
     <div className="relative">
@@ -12,8 +23,9 @@ export default function UserMenu() {
         className="avatar cursor-pointer"
         style={{ width: "36px", height: "36px" }}
         onClick={() => setIsOpen(!isOpen)}
+        aria-label="Menu utilisateur"
       >
-        RK
+        {initials}
       </button>
 
       {isOpen && (
@@ -36,10 +48,10 @@ export default function UserMenu() {
           >
             <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--color-border)" }}>
               <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--color-foreground)" }}>
-                Rayan Kabra
+                Compte admin
               </div>
               <div style={{ fontSize: "13px", color: "var(--color-muted)", marginTop: "2px" }}>
-                rayan@company.com
+                {user.email}
               </div>
             </div>
 
@@ -69,19 +81,6 @@ export default function UserMenu() {
                 <Settings size={16} />
                 <span style={{ fontSize: "14px" }}>Paramètres</span>
               </button>
-
-              <button
-                className="flex items-center btn-ghost"
-                style={{ 
-                  width: "100%", 
-                  padding: "10px 12px", 
-                  gap: "12px",
-                  justifyContent: "flex-start"
-                }}
-              >
-                <CreditCard size={16} />
-                <span style={{ fontSize: "14px" }}>Facturation</span>
-              </button>
             </div>
 
             <div className="divider-h" />
@@ -94,7 +93,12 @@ export default function UserMenu() {
                   padding: "10px 12px", 
                   gap: "12px",
                   justifyContent: "flex-start",
-                  color: "var(--color-danger)"
+                  color: "var(--color-danger)",
+                  cursor: "pointer"
+                }}
+                onClick={() => {
+                  setIsOpen(false);
+                  onLogout();
                 }}
               >
                 <LogOut size={16} />

@@ -23,7 +23,7 @@ export default function CreateFeatureModal({ onClose, onCreate }: CreateFeatureM
     onCreate({
       title: title.trim(),
       description: description.trim(),
-      status: "under-review",
+      status: "planned",
       category,
       author: "Vous",
     });
