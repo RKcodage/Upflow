@@ -64,13 +64,15 @@ The public-facing widget that embeds into any website:
 
 ```bash
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
 Visit:
 
 - Dashboard: http://localhost:3000
-- Widget Demo: http://localhost:3000/widget
+- Widget Demo: http://localhost:3000/demo
+- Embed page (iframe): http://localhost:3000/embed
 
 ---
 
@@ -80,12 +82,14 @@ This is what developers would add to their website:
 
 ```html
 <!-- Add UpFlow widget -->
-<script src="https://upflow.com/widget.js"></script>
+<script src="https://YOUR_UPFLOW_DOMAIN/upflow-widget.js"></script>
 <script>
   UpFlow.init({
     projectId: "your-project-id",
+    // projectKey: "your-public-project-key",
     position: "bottom-right", // or 'bottom-left'
     theme: "dark", // or 'light'
+    // accent: "#6b59d7",
   });
 </script>
 ```
@@ -104,7 +108,7 @@ The widget then:
 ### For Developers
 
 - ✅ Zero external dependencies (just Next.js + Tailwind + lucide-react)
-- ✅ No database needed (in-memory state)
+- ✅ MongoDB + API pour persister les votes et demandes
 - ✅ Fully functional voting system
 - ✅ Real feature submission
 - ✅ Clean, modular component structure
