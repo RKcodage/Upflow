@@ -264,9 +264,12 @@ export default function WidgetDemoPage() {
       )}
 
       {/* UpFlow Widget */}
-      <VoteWidget 
+      <VoteWidget
         isOpen={isWidgetOpen}
         onToggle={() => setIsWidgetOpen(!isWidgetOpen)}
+        projectId="demo"
+        projectKey={process.env.NEXT_PUBLIC_UPFLOW_PROJECT_KEY ?? ""}
+        siteOrigin={typeof window !== "undefined" ? window.location.origin : ""}
       />
     </div>
   );

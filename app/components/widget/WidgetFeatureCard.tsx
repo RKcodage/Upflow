@@ -7,7 +7,7 @@ interface Feature {
   title: string;
   description: string;
   votes: number;
-  status: "live" | "planned" | "in-progress";
+  status: "live" | "planned" | "in-progress" | "under-review";
   category: string;
   userVoted: boolean;
 }
@@ -26,6 +26,8 @@ export default function WidgetFeatureCard({ feature, onVote }: WidgetFeatureCard
         return { bg: "var(--color-accent-light)", color: "var(--color-accent)", label: "En cours" };
       case "planned":
         return { bg: "var(--color-warning-bg)", color: "var(--color-warning)", label: "Planifié" };
+      case "under-review":
+        return { bg: "var(--color-secondary-light)", color: "var(--color-secondary)", label: "En révision" };
     }
   };
 

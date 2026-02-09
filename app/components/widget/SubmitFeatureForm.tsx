@@ -97,7 +97,7 @@ export default function SubmitFeatureForm({ onSubmit, onCancel }: SubmitFeatureF
 
         <button
           type="submit"
-          className="btn-primary flex items-center"
+          className="btn-primary flex items-center cursor-pointer"
           style={{ padding: "12px", gap: "8px", justifyContent: "center" }}
           disabled={!title.trim() || !description.trim()}
         >

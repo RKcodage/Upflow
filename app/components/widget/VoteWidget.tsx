@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MessageSquare, X, Plus, Search, TrendingUp, Clock } from "lucide-react";
 import WidgetFeatureCard from "./WidgetFeatureCard";
 import SubmitFeatureForm from "./SubmitFeatureForm";
@@ -8,6 +8,9 @@ import SubmitFeatureForm from "./SubmitFeatureForm";
 interface VoteWidgetProps {
   isOpen: boolean;
   onToggle: () => void;
+  projectId?: string;
+  projectKey?: string;
+  siteOrigin?: string;
 }
 
 interface Feature {
@@ -15,70 +18,35 @@ interface Feature {
   title: string;
   description: string;
   votes: number;
-  status: "live" | "planned" | "in-progress";
+  status: "live" | "planned" | "in-progress" | "under-review";
   category: string;
   userVoted: boolean;
+  createdAt?: string | null;
 }
 
-const demoFeatures: Feature[] = [
-  {
-    id: "1",
-    title: "Mode sombre",
-    description: "Ajouter un bouton pour basculer entre les thèmes clair et sombre",
-    votes: 124,
-    status: "in-progress",
-    category: "UI/UX",
-    userVoted: false,
-  },
-  {
-    id: "2",
-    title: "Raccourcis clavier",
-    description: "Implémenter des raccourcis clavier personnalisables pour les actions courantes",
-    votes: 89,
-    status: "planned",
-    category: "Productivité",
-    userVoted: false,
-  },
-  {
-    id: "3",
-    title: "Exporter en CSV",
-    description: "Permettre aux utilisateurs d’exporter les données au format CSV",
-    votes: 156,
-    status: "live",
-    category: "Fonctionnalités",
-    userVoted: false,
-  },
-  {
-    id: "4",
-    title: "Application mobile",
-    description: "Créer des applications natives iOS et Android",
-    votes: 203,
-    status: "planned",
-    category: "Plateforme",
-    userVoted: false,
-  },
-  {
-    id: "5",
-    title: "Authentification à deux facteurs",
-    description: "Ajouter la 2FA pour renforcer la sécurité des comptes",
-    votes: 67,
-    status: "in-progress",
-    category: "Sécurité",
-    userVoted: false,
-  },
-  {
-    id: "6",
-    title: "Webhooks API",
-    description: "Déclencher des webhooks lorsque certains événements surviennent",
-    votes: 78,
-    status: "planned",
-    category: "Intégration",
-    userVoted: false,
-  },
-];
+const DEFAULT_PROJECT_ID = "default";
+const VISITOR_KEY = "upflow-visitor-id";
 
-export default function VoteWidget({ isOpen, onToggle }: VoteWidgetProps) {
-  const [features, setFeatures] = useState<Feature[]>(demoFeatures);
+const generateVisitorId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+export default function VoteWidget({
+  isOpen,
+  onToggle,
+  projectId = DEFAULT_PROJECT_ID,
+  projectKey = "",
+  siteOrigin = "",
+}: VoteWidgetProps) {
+  const resolvedProjectId = projectId.trim() ? projectId.trim() : DEFAULT_PROJECT_ID;
+  const resolvedProjectKey = projectKey.trim();
+  const resolvedSiteOrigin = siteOrigin.trim();
+  const [features, setFeatures] = useState<Feature[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [visitorId, setVisitorId] = useState<string | null>(null);
   const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [sortBy, setSortBy] = useState<"votes" | "recent">("votes");
   const [searchQuery, setSearchQuery] = useState("");
@@ -93,54 +61,141 @@ export default function VoteWidget({ isOpen, onToggle }: VoteWidgetProps) {
     }
   }, [showToast]);
 
-  const handleVote = (featureId: string) => {
-    setFeatures((prev) =>
-      prev.map((f) => {
-        if (f.id === featureId) {
-          const newVoted = !f.userVoted;
-          return {
-            ...f,
-            votes: f.votes + (newVoted ? 1 : -1),
-            userVoted: newVoted,
-          };
-        }
-        return f;
-      })
-    );
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(VISITOR_KEY);
+    if (stored) {
+      setVisitorId(stored);
+      return;
+    }
+    const nextId = generateVisitorId();
+    window.localStorage.setItem(VISITOR_KEY, nextId);
+    setVisitorId(nextId);
+  }, []);
 
-    const feature = features.find((f) => f.id === featureId);
-    if (feature) {
-      setToastMessage(feature.userVoted ? "Vote retiré" : "Merci pour votre vote ! 🎉");
+  const loadFeatures = async () => {
+    try {
+      if (!resolvedProjectKey && !resolvedSiteOrigin) {
+        setFeatures([]);
+        setIsLoading(false);
+        setToastMessage("Projet non configuré");
+        setShowToast(true);
+        return;
+      }
+      setIsLoading(true);
+      const params = new URLSearchParams({
+        projectId: resolvedProjectId,
+        voterId: visitorId ?? "",
+      });
+      if (resolvedProjectKey) params.set("projectKey", resolvedProjectKey);
+      if (resolvedSiteOrigin) params.set("siteOrigin", resolvedSiteOrigin);
+      const response = await fetch(`/api/features?${params.toString()}`, {
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load features");
+      }
+
+      const data = await response.json();
+      setFeatures(Array.isArray(data.features) ? data.features : []);
+    } catch (error) {
+      setToastMessage("Impossible de charger les fonctionnalités");
+      setShowToast(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!visitorId) return;
+    void loadFeatures();
+  }, [visitorId, resolvedProjectId, resolvedProjectKey, resolvedSiteOrigin]);
+
+  const handleVote = async (featureId: string) => {
+    if (!visitorId) return;
+    if (!resolvedProjectKey && !resolvedSiteOrigin) return;
+    try {
+      const response = await fetch(`/api/features/${featureId}/vote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          voterId: visitorId,
+          projectKey: resolvedProjectKey,
+          siteOrigin: resolvedSiteOrigin,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to vote");
+      }
+
+      const data = await response.json();
+      setFeatures((prev) =>
+        prev.map((feature) =>
+          feature.id === featureId
+            ? { ...feature, votes: data.votes, userVoted: data.userVoted }
+            : feature
+        )
+      );
+
+      setToastMessage(data.userVoted ? "Merci pour votre vote ! 🎉" : "Vote retiré");
+      setShowToast(true);
+    } catch (error) {
+      setToastMessage("Impossible de voter pour le moment");
       setShowToast(true);
     }
   };
 
-  const handleSubmitFeature = (title: string, description: string, category: string) => {
-    const newFeature: Feature = {
-      id: Date.now().toString(),
-      title,
-      description,
-      votes: 1,
-      status: "planned",
-      category,
-      userVoted: true,
-    };
-    setFeatures((prev) => [newFeature, ...prev]);
-    setShowSubmitForm(false);
-    setToastMessage("Demande de fonctionnalité envoyée ! 🚀");
-    setShowToast(true);
+  const handleSubmitFeature = async (title: string, description: string, category: string) => {
+    if (!visitorId) return;
+    if (!resolvedProjectKey && !resolvedSiteOrigin) return;
+    try {
+      const response = await fetch("/api/features", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description,
+          category,
+          projectId: resolvedProjectId,
+          projectKey: resolvedProjectKey,
+          siteOrigin: resolvedSiteOrigin,
+          voterId: visitorId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create feature");
+      }
+
+      const data = await response.json();
+      if (data?.feature) {
+        setFeatures((prev) => [data.feature, ...prev]);
+      }
+      setShowSubmitForm(false);
+      setToastMessage("Demande de fonctionnalité envoyée ! 🚀");
+      setShowToast(true);
+    } catch (error) {
+      setToastMessage("Impossible d'envoyer la demande");
+      setShowToast(true);
+    }
   };
 
-  const filteredAndSortedFeatures = features
-    .filter((f) => {
-      if (filterStatus !== "all" && f.status !== filterStatus) return false;
-      if (searchQuery && !f.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+  const filteredAndSortedFeatures = useMemo(() => {
+    const filtered = features.filter((feature) => {
+      if (filterStatus !== "all" && feature.status !== filterStatus) return false;
+      if (searchQuery && !feature.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
-    })
-    .sort((a, b) => {
-      if (sortBy === "votes") return b.votes - a.votes;
-      return parseInt(b.id) - parseInt(a.id);
     });
+
+    return filtered.sort((a, b) => {
+      if (sortBy === "votes") return b.votes - a.votes;
+      const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bDate - aDate;
+    });
+  }, [features, filterStatus, searchQuery, sortBy]);
 
   return (
     <>
@@ -149,23 +204,23 @@ export default function VoteWidget({ isOpen, onToggle }: VoteWidgetProps) {
         <button
           onClick={onToggle}
           className="animate-scale-in"
-	          style={{
-	            position: "fixed",
-	            bottom: "24px",
-	            right: "24px",
-	            width: "60px",
-	            height: "60px",
-	            borderRadius: "50%",
-	            background: "linear-gradient(135deg, var(--color-accent), var(--color-accent-hover))",
-	            border: "none",
-	            cursor: "pointer",
-	            display: "flex",
-	            alignItems: "center",
-	            justifyContent: "center",
-	            boxShadow: "0 8px 30px rgba(107, 89, 215, 0.4)",
-	            zIndex: 1000,
-	            transition: "all 0.3s",
-	          }}
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            right: "24px",
+            width: "60px",
+            height: "60px",
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, var(--color-accent), var(--color-accent-hover))",
+            border: "none",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 8px 30px rgba(107, 89, 215, 0.4)",
+            zIndex: 1000,
+            transition: "all 0.3s",
+          }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = "scale(1.1)";
           }}
@@ -221,18 +276,18 @@ export default function VoteWidget({ isOpen, onToggle }: VoteWidgetProps) {
             >
               <div className="flex items-center justify-between" style={{ marginBottom: "8px" }}>
                 <div className="flex items-center" style={{ gap: "10px" }}>
-	                  <div
-	                    style={{
-	                      width: "32px",
-	                      height: "32px",
-	                      background: "linear-gradient(135deg, var(--color-accent), var(--color-accent-hover))",
-	                      borderRadius: "8px",
-	                      display: "flex",
-	                      alignItems: "center",
-	                      justifyContent: "center",
-	                    }}
+                  <div
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      background: "linear-gradient(135deg, var(--color-accent), var(--color-accent-hover))",
+                      borderRadius: "8px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
                   >
-                    <MessageSquare size={18} color="#0a0e14" strokeWidth={2.5} />
+                    <MessageSquare size={18} color="white" strokeWidth={2.5} />
                   </div>
                   <div>
                     <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--color-foreground)" }}>
@@ -326,19 +381,19 @@ export default function VoteWidget({ isOpen, onToggle }: VoteWidgetProps) {
             {/* Content Area */}
             <div className="flex-1 overflow-y-auto" style={{ background: "var(--color-background)" }}>
               {showSubmitForm ? (
-                <SubmitFeatureForm
-                  onSubmit={handleSubmitFeature}
-                  onCancel={() => setShowSubmitForm(false)}
-                />
+                <SubmitFeatureForm onSubmit={handleSubmitFeature} onCancel={() => setShowSubmitForm(false)} />
+              ) : isLoading ? (
+                <div
+                  className="flex flex-col items-center justify-center"
+                  style={{ padding: "60px 20px" }}
+                >
+                  <p style={{ fontSize: "14px", color: "var(--color-muted)" }}>Chargement...</p>
+                </div>
               ) : (
                 <div style={{ padding: "16px" }}>
                   <div className="flex flex-col" style={{ gap: "12px" }}>
                     {filteredAndSortedFeatures.map((feature) => (
-                      <WidgetFeatureCard
-                        key={feature.id}
-                        feature={feature}
-                        onVote={handleVote}
-                      />
+                      <WidgetFeatureCard key={feature.id} feature={feature} onVote={handleVote} />
                     ))}
                   </div>
 
@@ -367,7 +422,7 @@ export default function VoteWidget({ isOpen, onToggle }: VoteWidgetProps) {
                 }}
               >
                 <button
-                  className="btn-primary flex items-center"
+                  className="btn-primary flex items-center cursor-pointer"
                   style={{ width: "100%", padding: "12px", gap: "8px", justifyContent: "center" }}
                   onClick={() => setShowSubmitForm(true)}
                 >
