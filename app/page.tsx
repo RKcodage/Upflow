@@ -279,6 +279,8 @@ export default function Home() {
       }
 
       const params = new URLSearchParams({ projectId: activeProjectId });
+      if (projectKey) params.set("projectKey", projectKey);
+      if (siteOrigin) params.set("siteOrigin", siteOrigin);
       if (siteOrigin) params.set("siteOrigin", siteOrigin);
       if (projectKey) params.set("projectKey", projectKey);
       if (activeProjectKey) params.set("projectKey", activeProjectKey);
