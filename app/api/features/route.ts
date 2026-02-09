@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const sortBy = sort === "recent" ? { createdAt: "desc" as const } : { votes: "desc" as const };
+    const sortBy: Record<string, 1 | -1> = sort === "recent" ? { createdAt: -1 } : { votes: -1 };
     const features = await FeatureModel.find(filter).sort(sortBy).lean();
 
     return NextResponse.json({
