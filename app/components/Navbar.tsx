@@ -73,7 +73,7 @@ export default function Navbar({
         </div>
 
         <div className="flex items-center" style={{ gap: "8px" }}>
-          <button className="btn-ghost" style={{ padding: "8px 12px" }}>
+          {/* <button className="btn-ghost" style={{ padding: "8px 12px" }}>
             Fonctionnalités
           </button>
           <button className="btn-ghost" style={{ padding: "8px 12px" }}>
@@ -81,9 +81,9 @@ export default function Navbar({
           </button>
           <button className="btn-ghost" style={{ padding: "8px 12px" }}>
             Journal des modifications
-          </button>
+          </button> */}
           <Link href="/demo" className="btn-ghost" style={{ padding: "8px 12px", textDecoration: "none" }}>
-            Démo
+            Démo du widget
           </Link>
         </div>
       </div>
