@@ -57,6 +57,16 @@ type WidgetOriginStatus = {
   connected: boolean;
   lastSeenLabel: string;
 };
+type WidgetOriginPayload = {
+  siteOrigin?: unknown;
+  lastSeenAt?: unknown;
+  connected?: unknown;
+};
+
+const isWidgetOriginPayload = (
+  origin: WidgetOriginPayload
+): origin is WidgetOriginPayload & { siteOrigin: string } =>
+  Boolean(origin && typeof origin.siteOrigin === "string");
 
 const generateVisitorId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -333,10 +343,8 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(data?.error || "Failed to load widget status");
       }
-      const origins = Array.isArray(data?.origins) ? data.origins : [];
-      const nextOrigins = origins
-        .filter((origin) => origin && typeof origin.siteOrigin === "string")
-        .map((origin) => {
+      const origins = Array.isArray(data?.origins) ? (data.origins as WidgetOriginPayload[]) : [];
+      const nextOrigins = origins.filter(isWidgetOriginPayload).map((origin) => {
           const lastSeenAt =
             typeof origin.lastSeenAt === "string" && origin.lastSeenAt.trim()
               ? origin.lastSeenAt
