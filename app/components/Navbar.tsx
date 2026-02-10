@@ -82,7 +82,13 @@ export default function Navbar({
           <button className="btn-ghost" style={{ padding: "8px 12px" }}>
             Journal des modifications
           </button> */}
-          <Link href="/demo" className="btn-ghost" style={{ padding: "8px 12px", textDecoration: "none" }}>
+          <Link
+            href="/demo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-ghost"
+            style={{ padding: "8px 12px", textDecoration: "none" }}
+          >
             Démo du widget
           </Link>
         </div>
