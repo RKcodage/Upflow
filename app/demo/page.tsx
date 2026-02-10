@@ -13,6 +13,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import VoteWidget from "../components/widget/VoteWidget";
 
@@ -22,15 +23,19 @@ const STORAGE_PROJECT_KEY = "upflow-admin-project-key";
 function WidgetDemoContent() {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
   const searchParams = useSearchParams();
-  const [projectId, setProjectId] = useState("");
-  const [projectKey, setProjectKey] = useState("");
+  const [projectId, setProjectId] = useState(
+    process.env.NEXT_PUBLIC_UPFLOW_DEMO_PROJECT_ID ?? "demo"
+  );
+  const [projectKey, setProjectKey] = useState(
+    process.env.NEXT_PUBLIC_UPFLOW_DEMO_PROJECT_KEY ?? ""
+  );
 
   useEffect(() => {
-    const fromQuery = searchParams.get("projectId")?.trim() ?? "";
-    const fromQueryKey = searchParams.get("projectKey")?.trim() ?? "";
-    if (fromQuery) {
-      setProjectId(fromQuery);
-      setProjectKey(fromQueryKey);
+    const queryProjectId = searchParams.get("projectId")?.trim() ?? "";
+    const queryProjectKey = searchParams.get("projectKey")?.trim() ?? "";
+    if (queryProjectId) {
+      setProjectId(queryProjectId);
+      setProjectKey(queryProjectKey);
       return;
     }
 
@@ -40,12 +45,8 @@ function WidgetDemoContent() {
       if (storedId) {
         setProjectId(storedId);
         setProjectKey(storedKey);
-        return;
       }
     }
-
-    setProjectId(process.env.NEXT_PUBLIC_UPFLOW_PROJECT_ID ?? "");
-    setProjectKey(process.env.NEXT_PUBLIC_UPFLOW_PROJECT_KEY ?? "");
   }, [searchParams]);
 
   return (
@@ -68,7 +69,21 @@ function WidgetDemoContent() {
           </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
+          <Link
+            href="/"
+            style={{
+              color: "#111827",
+              textDecoration: "none",
+              fontWeight: 600,
+              padding: "8px 12px",
+              borderRadius: "8px",
+              border: "1px solid #e5e7eb",
+              background: "#ffffff",
+            }}
+          >
+            Dashboard
+          </Link>
           <a href="#" style={{ color: "#6b7280", textDecoration: "none", fontWeight: 500 }}>Fonctionnalités</a>
           <a href="#" style={{ color: "#6b7280", textDecoration: "none", fontWeight: 500 }}>Tarifs</a>
           <a href="#" style={{ color: "#6b7280", textDecoration: "none", fontWeight: 500 }}>À propos</a>
@@ -300,6 +315,7 @@ function WidgetDemoContent() {
         projectId={projectId}
         projectKey={projectKey}
         siteOrigin={typeof window !== "undefined" ? window.location.origin : ""}
+        enablePing
       />
     </div>
   );
