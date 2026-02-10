@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Check, Copy, X } from "lucide-react";
+import DeleteProjectModal from "./DeleteProjectModal";
 
 type Project = {
   projectId: string;
@@ -29,6 +30,8 @@ export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalPr
   const [publicKey, setPublicKey] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const isNew = selectedProject === NEW_PROJECT;
@@ -170,6 +173,59 @@ export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalPr
       setIsSaving(false);
     }
   };
+
+  const handleDelete = async () => {
+    if (isNew) return;
+    try {
+      setIsDeleting(true);
+      const response = await fetch(`/api/projects/${encodeURIComponent(selectedProject)}`, {
+        method: "DELETE",
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Erreur inconnue");
+      }
+
+      const nextProjects = projects.filter((item) => item.projectId !== selectedProject);
+      setProjects(nextProjects);
+
+      const nextSelected = nextProjects[0]?.projectId ?? NEW_PROJECT;
+      setSelectedProject(nextSelected);
+
+      if (typeof window !== "undefined") {
+        const storedProjectId = window.localStorage.getItem(STORAGE_PROJECT_ID);
+        if (storedProjectId === selectedProject) {
+          if (nextSelected !== NEW_PROJECT) {
+            window.localStorage.setItem(STORAGE_PROJECT_ID, nextSelected);
+            const nextKey = nextProjects.find((item) => item.projectId === nextSelected)?.publicKey ?? "";
+            if (nextKey) {
+              window.localStorage.setItem(STORAGE_PROJECT_KEY, nextKey);
+            } else {
+              window.localStorage.removeItem(STORAGE_PROJECT_KEY);
+            }
+          } else {
+            window.localStorage.removeItem(STORAGE_PROJECT_ID);
+            window.localStorage.removeItem(STORAGE_PROJECT_KEY);
+          }
+          window.dispatchEvent(new Event("upflow:project-change"));
+          window.dispatchEvent(new Event("upflow:widget-check"));
+        }
+      }
+
+      setToast({ type: "success", message: "Projet supprimé" });
+      setIsDeleteModalOpen(false);
+    } catch (error) {
+      setToast({ type: "error", message: error instanceof Error ? error.message : "Erreur" });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const selectedProjectLabel = useMemo(() => {
+    const project = projects.find((item) => item.projectId === selectedProject);
+    if (!project) return selectedProject || "projet";
+    return project.name ? `${project.name} (${project.projectId})` : project.projectId;
+  }, [projects, selectedProject]);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -372,22 +428,51 @@ export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalPr
         </div>
 
         <div
-          className="flex items-center justify-end"
+          className="flex items-center justify-between"
           style={{ padding: "20px 24px", borderTop: "1px solid var(--color-border)", gap: "12px" }}
         >
-          <button className="btn-secondary" style={{ padding: "10px 18px", cursor: "pointer" }} onClick={onClose}>
-            Fermer
-          </button>
-          <button
-            className="btn-primary"
-            style={{ padding: "10px 18px", cursor: "pointer" }}
-            onClick={handleSave}
-            disabled={isSaving}
-          >
-            {isSaving ? "Sauvegarde..." : "Sauvegarder"}
-          </button>
+          <div>
+            {!isNew && (
+              <button
+                className="btn-secondary"
+                style={{
+                  padding: "10px 18px",
+                  cursor: "pointer",
+                  background: "var(--color-danger-bg)",
+                  borderColor: "var(--color-danger)",
+                  color: "var(--color-danger)",
+                }}
+                onClick={() => setIsDeleteModalOpen(true)}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Suppression..." : "Supprimer"}
+              </button>
+            )}
+          </div>
+          <div className="flex items-center" style={{ gap: "12px" }}>
+            <button className="btn-secondary" style={{ padding: "10px 18px", cursor: "pointer" }} onClick={onClose}>
+              Fermer
+            </button>
+            <button
+              className="btn-primary"
+              style={{ padding: "10px 18px", cursor: "pointer" }}
+              onClick={handleSave}
+              disabled={isSaving || isDeleting}
+            >
+              {isSaving ? "Sauvegarde..." : "Sauvegarder"}
+            </button>
+          </div>
         </div>
       </div>
+
+      {isDeleteModalOpen && !isNew && (
+        <DeleteProjectModal
+          projectLabel={selectedProjectLabel}
+          isDeleting={isDeleting}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={handleDelete}
+        />
+      )}
 
       {toast && (
         <div

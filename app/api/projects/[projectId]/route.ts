@@ -1,7 +1,10 @@
 import crypto from "crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
+import FeatureModel from "@/lib/models/Feature";
+import NotificationModel from "@/lib/models/Notification";
 import ProjectModel from "@/lib/models/Project";
+import WidgetPingModel from "@/lib/models/WidgetPing";
 import { getSessionFromRequest } from "@/lib/auth";
 
 const parseOrigins = (value: unknown) => {
@@ -56,6 +59,39 @@ export async function PATCH(
         allowedOrigins: project.allowedOrigins ?? [],
       },
     });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Unexpected error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ projectId: string }> }
+) {
+  try {
+    await connectToDatabase();
+    const session = getSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
+    const { projectId } = await params;
+
+    const project = await ProjectModel.findOne({ projectId, ownerId: session.sub }).lean();
+    if (!project) {
+      return NextResponse.json({ error: "Project not found." }, { status: 404 });
+    }
+
+    await Promise.all([
+      ProjectModel.deleteOne({ projectId, ownerId: session.sub }),
+      FeatureModel.deleteMany({ projectId }),
+      NotificationModel.deleteMany({ projectId }),
+      WidgetPingModel.deleteMany({ projectId }),
+    ]);
+
+    return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unexpected error" },
