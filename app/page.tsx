@@ -279,10 +279,6 @@ export default function Home() {
       }
 
       const params = new URLSearchParams({ projectId: activeProjectId });
-      if (projectKey) params.set("projectKey", projectKey);
-      if (siteOrigin) params.set("siteOrigin", siteOrigin);
-      if (siteOrigin) params.set("siteOrigin", siteOrigin);
-      if (projectKey) params.set("projectKey", projectKey);
       if (activeProjectKey) params.set("projectKey", activeProjectKey);
       if (activeSiteOrigin) params.set("siteOrigin", activeSiteOrigin);
 
@@ -308,7 +304,11 @@ export default function Home() {
     }
   };
 
-  const loadWidgetStatus = async (activeProjectId: string) => {
+  const loadWidgetStatus = async (
+    activeProjectId: string,
+    activeProjectKey: string,
+    activeSiteOrigin: string
+  ) => {
     try {
       if (!activeProjectId) {
         setWidgetConnected(false);
@@ -316,6 +316,8 @@ export default function Home() {
       }
 
       const params = new URLSearchParams({ projectId: activeProjectId });
+      if (activeProjectKey) params.set("projectKey", activeProjectKey);
+      if (activeSiteOrigin) params.set("siteOrigin", activeSiteOrigin);
       const response = await fetch(`/api/widget/ping?${params.toString()}`, {
         cache: "no-store",
         headers: { "x-upflow-admin": "1" },
@@ -361,7 +363,7 @@ export default function Home() {
     if (typeof window === "undefined") return;
     const handler = () => {
       if (!projectId) return;
-      void loadWidgetStatus(projectId);
+      void loadWidgetStatus(projectId, projectKey, siteOrigin);
     };
     window.addEventListener("upflow:widget-check", handler);
     return () => window.removeEventListener("upflow:widget-check", handler);
@@ -372,13 +374,13 @@ export default function Home() {
       setWidgetConnected(false);
       return;
     }
-    void loadWidgetStatus(projectId);
+    void loadWidgetStatus(projectId, projectKey, siteOrigin);
   }, [isAuthed, projectId, projectKey, siteOrigin]);
 
   useEffect(() => {
     if (!isAuthed || !projectId) return;
     const interval = window.setInterval(() => {
-      void loadWidgetStatus(projectId);
+      void loadWidgetStatus(projectId, projectKey, siteOrigin);
     }, 20000);
     return () => window.clearInterval(interval);
   }, [isAuthed, projectId, projectKey, siteOrigin]);
