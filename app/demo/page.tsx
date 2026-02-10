@@ -12,17 +12,41 @@
 
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import VoteWidget from "../components/widget/VoteWidget";
+
+const STORAGE_PROJECT_ID = "upflow-admin-project-id";
+const STORAGE_PROJECT_KEY = "upflow-admin-project-key";
 
 function WidgetDemoContent() {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
   const searchParams = useSearchParams();
-  const projectId =
-    searchParams.get("projectId") ?? process.env.NEXT_PUBLIC_UPFLOW_PROJECT_ID ?? "demo";
-  const projectKey =
-    searchParams.get("projectKey") ?? process.env.NEXT_PUBLIC_UPFLOW_PROJECT_KEY ?? "";
+  const [projectId, setProjectId] = useState("");
+  const [projectKey, setProjectKey] = useState("");
+
+  useEffect(() => {
+    const fromQuery = searchParams.get("projectId")?.trim() ?? "";
+    const fromQueryKey = searchParams.get("projectKey")?.trim() ?? "";
+    if (fromQuery) {
+      setProjectId(fromQuery);
+      setProjectKey(fromQueryKey);
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      const storedId = window.localStorage.getItem(STORAGE_PROJECT_ID) ?? "";
+      const storedKey = window.localStorage.getItem(STORAGE_PROJECT_KEY) ?? "";
+      if (storedId) {
+        setProjectId(storedId);
+        setProjectKey(storedKey);
+        return;
+      }
+    }
+
+    setProjectId(process.env.NEXT_PUBLIC_UPFLOW_PROJECT_ID ?? "");
+    setProjectKey(process.env.NEXT_PUBLIC_UPFLOW_PROJECT_KEY ?? "");
+  }, [searchParams]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#ffffff" }}>
