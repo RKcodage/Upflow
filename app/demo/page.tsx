@@ -12,11 +12,11 @@
 
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import VoteWidget from "../components/widget/VoteWidget";
 
-export default function WidgetDemoPage() {
+function WidgetDemoContent() {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
   const searchParams = useSearchParams();
   const projectId =
@@ -278,5 +278,19 @@ export default function WidgetDemoPage() {
         siteOrigin={typeof window !== "undefined" ? window.location.origin : ""}
       />
     </div>
+  );
+}
+
+export default function WidgetDemoPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center" style={{ minHeight: "100vh" }}>
+          <div style={{ color: "#6b7280" }}>Chargement...</div>
+        </div>
+      }
+    >
+      <WidgetDemoContent />
+    </Suspense>
   );
 }
