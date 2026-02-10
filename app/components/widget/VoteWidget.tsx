@@ -11,6 +11,7 @@ interface VoteWidgetProps {
   projectId?: string;
   projectKey?: string;
   siteOrigin?: string;
+  enablePing?: boolean;
 }
 
 interface Feature {
@@ -40,6 +41,7 @@ export default function VoteWidget({
   projectId = DEFAULT_PROJECT_ID,
   projectKey = "",
   siteOrigin = "",
+  enablePing = false,
 }: VoteWidgetProps) {
   const resolvedProjectId = projectId.trim() ? projectId.trim() : DEFAULT_PROJECT_ID;
   const resolvedProjectKey = projectKey.trim();
@@ -111,6 +113,34 @@ export default function VoteWidget({
     if (!visitorId) return;
     void loadFeatures();
   }, [visitorId, resolvedProjectId, resolvedProjectKey, resolvedSiteOrigin]);
+
+  useEffect(() => {
+    if (!enablePing) return;
+    if (!resolvedProjectId || (!resolvedProjectKey && !resolvedSiteOrigin)) return;
+    let intervalId: number | null = null;
+
+    const ping = async () => {
+      try {
+        await fetch("/api/widget/ping", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId: resolvedProjectId,
+            projectKey: resolvedProjectKey,
+            siteOrigin: resolvedSiteOrigin,
+          }),
+        });
+      } catch (error) {
+        // ignore ping failures
+      }
+    };
+
+    void ping();
+    intervalId = window.setInterval(ping, 20000);
+    return () => {
+      if (intervalId) window.clearInterval(intervalId);
+    };
+  }, [enablePing, resolvedProjectId, resolvedProjectKey, resolvedSiteOrigin]);
 
   const handleVote = async (featureId: string) => {
     if (!visitorId) return;
