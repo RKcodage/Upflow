@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { User, Settings, CreditCard, LogOut } from "lucide-react";
+import Link from "next/link";
+import { User, Settings, LogOut } from "lucide-react";
 
 type UserInfo = {
   id: string;
@@ -56,18 +57,21 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
             </div>
 
             <div style={{ padding: "8px" }}>
-              <button
+              <Link
+                href="/profile"
                 className="flex items-center btn-ghost"
                 style={{ 
                   width: "100%", 
                   padding: "10px 12px", 
                   gap: "12px",
-                  justifyContent: "flex-start"
+                  justifyContent: "flex-start",
+                  textDecoration: "none"
                 }}
+                onClick={() => setIsOpen(false)}
               >
                 <User size={16} />
                 <span style={{ fontSize: "14px" }}>Profil</span>
-              </button>
+              </Link>
 
               <button
                 className="flex items-center btn-ghost"
