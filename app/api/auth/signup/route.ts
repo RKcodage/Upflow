@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import UserModel from "@/lib/models/User";
 import { createSessionToken, hashPassword, setSessionCookie } from "@/lib/auth";
+import { ensureDemoProjectForUser } from "@/lib/demoProject";
 
 const isValidEmail = (value: string) => value.includes("@") && value.includes(".");
 
@@ -32,6 +33,8 @@ export async function POST(request: NextRequest) {
       email,
       passwordHash: hashPassword(password),
     });
+
+    await ensureDemoProjectForUser(user._id.toString());
 
     const token = createSessionToken({ userId: user._id.toString(), email: user.email });
     const response = NextResponse.json({

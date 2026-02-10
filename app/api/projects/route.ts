@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import ProjectModel from "@/lib/models/Project";
 import { getSessionFromRequest } from "@/lib/auth";
+import { ensureDemoProjectForUser } from "@/lib/demoProject";
 
 const parseOrigins = (value: unknown) => {
   if (!value) return [];
@@ -26,9 +27,16 @@ export async function GET(request: NextRequest) {
       { $set: { ownerId: session.sub } }
     );
 
-    const projects = await ProjectModel.find({ ownerId: session.sub })
+    let projects = await ProjectModel.find({ ownerId: session.sub })
       .sort({ createdAt: -1 })
       .lean();
+
+    if (!projects.length) {
+      await ensureDemoProjectForUser(session.sub);
+      projects = await ProjectModel.find({ ownerId: session.sub })
+        .sort({ createdAt: -1 })
+        .lean();
+    }
 
     return NextResponse.json({
       projects: projects.map((project) => ({
