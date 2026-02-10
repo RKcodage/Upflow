@@ -129,11 +129,13 @@ export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalPr
 
     try {
       setIsSaving(true);
-      const payload = {
+      const payload: { projectId: string; name: string; allowedOrigins?: string } = {
         projectId: trimmedId,
         name: name.trim(),
-        allowedOrigins,
       };
+      if (!isProtectedDemoProject) {
+        payload.allowedOrigins = allowedOrigins;
+      }
 
       const response = await fetch(
         isNew ? "/api/projects" : `/api/projects/${encodeURIComponent(selectedProject)}`,
@@ -221,11 +223,20 @@ export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalPr
     }
   };
 
+  const selectedProjectInfo = useMemo(
+    () => projects.find((item) => item.projectId === selectedProject),
+    [projects, selectedProject]
+  );
+
   const selectedProjectLabel = useMemo(() => {
-    const project = projects.find((item) => item.projectId === selectedProject);
+    const project = selectedProjectInfo;
     if (!project) return selectedProject || "projet";
     return project.name ? `${project.name} (${project.projectId})` : project.projectId;
-  }, [projects, selectedProject]);
+  }, [selectedProjectInfo, selectedProject]);
+
+  const isProtectedDemoProject =
+    selectedProjectInfo?.projectId === "demo" ||
+    selectedProjectInfo?.name?.toLowerCase() === "demo";
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -316,9 +327,12 @@ export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalPr
                   placeholder="http://localhost:3000\nhttps://example.com"
                   value={allowedOrigins}
                   onChange={(event) => setAllowedOrigins(event.target.value)}
+                  disabled={isProtectedDemoProject}
                 />
                 <div style={{ fontSize: "12px", color: "var(--color-muted)", marginTop: "6px" }}>
-                  Le domaine doit correspondre exactement (protocole + port).
+                  {isProtectedDemoProject
+                    ? "Les domaines du projet Demo sont verrouillés."
+                    : "Le domaine doit correspondre exactement (protocole + port)."}
                 </div>
               </div>
 
@@ -432,7 +446,7 @@ export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalPr
           style={{ padding: "20px 24px", borderTop: "1px solid var(--color-border)", gap: "12px" }}
         >
           <div>
-            {!isNew && (
+            {!isNew && !isProtectedDemoProject && (
               <button
                 className="btn-secondary"
                 style={{
@@ -465,7 +479,7 @@ export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalPr
         </div>
       </div>
 
-      {isDeleteModalOpen && !isNew && (
+      {isDeleteModalOpen && !isNew && !isProtectedDemoProject && (
         <DeleteProjectModal
           projectLabel={selectedProjectLabel}
           isDeleting={isDeleting}
