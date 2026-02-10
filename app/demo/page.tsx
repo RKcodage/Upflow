@@ -13,10 +13,16 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import VoteWidget from "../components/widget/VoteWidget";
 
 export default function WidgetDemoPage() {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const projectId =
+    searchParams.get("projectId") ?? process.env.NEXT_PUBLIC_UPFLOW_PROJECT_ID ?? "demo";
+  const projectKey =
+    searchParams.get("projectKey") ?? process.env.NEXT_PUBLIC_UPFLOW_PROJECT_KEY ?? "";
 
   return (
     <div style={{ minHeight: "100vh", background: "#ffffff" }}>
@@ -267,8 +273,8 @@ export default function WidgetDemoPage() {
       <VoteWidget
         isOpen={isWidgetOpen}
         onToggle={() => setIsWidgetOpen(!isWidgetOpen)}
-        projectId="demo"
-        projectKey={process.env.NEXT_PUBLIC_UPFLOW_PROJECT_KEY ?? ""}
+        projectId={projectId}
+        projectKey={projectKey}
         siteOrigin={typeof window !== "undefined" ? window.location.origin : ""}
       />
     </div>
