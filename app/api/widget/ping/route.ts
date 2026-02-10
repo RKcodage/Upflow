@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
     }
 
     const query: Record<string, string> = { projectId };
-    if (siteOrigin) query.siteOrigin = siteOrigin;
+    if (siteOrigin && !isAdmin) query.siteOrigin = siteOrigin;
 
     const latest = await WidgetPingModel.findOne(query).sort({ lastSeenAt: -1 }).lean();
     const lastSeenAt = latest?.lastSeenAt ? new Date(latest.lastSeenAt).toISOString() : null;
