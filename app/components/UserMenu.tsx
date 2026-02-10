@@ -72,19 +72,6 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
                 <User size={16} />
                 <span style={{ fontSize: "14px" }}>Profil</span>
               </Link>
-
-              <button
-                className="flex items-center btn-ghost"
-                style={{ 
-                  width: "100%", 
-                  padding: "10px 12px", 
-                  gap: "12px",
-                  justifyContent: "flex-start"
-                }}
-              >
-                <Settings size={16} />
-                <span style={{ fontSize: "14px" }}>Paramètres</span>
-              </button>
             </div>
 
             <div className="divider-h" />
