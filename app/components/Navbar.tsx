@@ -13,6 +13,7 @@ interface NavbarProps {
   onNotificationsOpen: () => void;
   onNotificationsClear: () => void;
   widgetConnected: boolean;
+  widgetOrigins: { siteOrigin: string; lastSeenLabel: string; connected: boolean }[];
   user: { id: string; email: string };
   onLogout: () => void;
 }
@@ -25,6 +26,7 @@ export default function Navbar({
   onNotificationsOpen,
   onNotificationsClear,
   widgetConnected,
+  widgetOrigins,
   user,
   onLogout,
 }: NavbarProps) {
@@ -40,10 +42,14 @@ export default function Navbar({
         color: "var(--color-warning)",
       };
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showWidgetStatus, setShowWidgetStatus] = useState(false);
   const handleNotificationsClick = () => {
     const next = !showNotifications;
     setShowNotifications(next);
     if (next) onNotificationsOpen();
+  };
+  const handleWidgetStatusClick = () => {
+    setShowWidgetStatus((prev) => !prev);
   };
 
   return (
@@ -83,32 +89,88 @@ export default function Navbar({
       </div>
 
       <div className="flex items-center" style={{ gap: "12px", paddingRight: "24px" }}>
-        <div
-          className="flex items-center"
-          style={{
-            ...widgetBadgeStyle,
-            borderRadius: "6px",
-            padding: "4px 10px",
-            gap: "6px",
-          }}
-        >
-          <div 
-            style={{ 
-              width: "6px", 
-              height: "6px", 
-              borderRadius: "50%", 
-              background: widgetConnected ? "var(--color-success)" : "var(--color-warning)",
-            }} 
-          />
-          <span
+        <div className="relative">
+          <button
+            className="flex items-center cursor-pointer"
+            onClick={handleWidgetStatusClick}
             style={{
-              fontSize: "12px",
-              fontWeight: 600,
-              color: widgetConnected ? "var(--color-success)" : "var(--color-warning)",
+              ...widgetBadgeStyle,
+              borderRadius: "6px",
+              padding: "4px 10px",
+              gap: "6px",
             }}
           >
-            {widgetConnected ? "Widget connecté" : "Widget non connecté"}
-          </span>
+            <div 
+              style={{ 
+                width: "6px", 
+                height: "6px", 
+                borderRadius: "50%", 
+                background: widgetConnected ? "var(--color-success)" : "var(--color-warning)",
+              }} 
+            />
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: 600,
+                color: widgetConnected ? "var(--color-success)" : "var(--color-warning)",
+              }}
+            >
+              {widgetConnected ? "Widget connecté" : "Widget non connecté"}
+            </span>
+          </button>
+          {showWidgetStatus && (
+            <div
+              className="dropdown animate-slide-down"
+              style={{
+                top: "calc(100% + 8px)",
+                right: "0",
+                width: "320px",
+                padding: "12px",
+              }}
+            >
+              <div style={{ fontSize: "12px", fontWeight: 700, marginBottom: "8px" }}>
+                Statut par origine
+              </div>
+              {widgetOrigins.length === 0 ? (
+                <div style={{ fontSize: "12px", color: "var(--color-muted)" }}>
+                  Aucun ping reçu.
+                </div>
+              ) : (
+                <div className="flex flex-col" style={{ gap: "8px" }}>
+                  {widgetOrigins.map((origin) => (
+                    <div
+                      key={origin.siteOrigin}
+                      className="flex items-center justify-between"
+                      style={{
+                        padding: "8px 10px",
+                        borderRadius: "8px",
+                        background: "var(--color-card-hover)",
+                        border: "1px solid var(--color-border)",
+                      }}
+                    >
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <span style={{ fontSize: "12px", fontWeight: 600 }}>
+                          {origin.siteOrigin}
+                        </span>
+                        <span style={{ fontSize: "11px", color: "var(--color-muted)" }}>
+                          Dernier ping: {origin.lastSeenLabel}
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          color: origin.connected ? "var(--color-success)" : "var(--color-warning)",
+                        }}
+                      >
+                        {origin.connected ? "Connecté" : "Inactif"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <button 

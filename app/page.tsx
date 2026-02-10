@@ -51,6 +51,12 @@ type AuthUser = {
   id: string;
   email: string;
 };
+type WidgetOriginStatus = {
+  siteOrigin: string;
+  lastSeenAt: string | null;
+  connected: boolean;
+  lastSeenLabel: string;
+};
 
 const generateVisitorId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -122,6 +128,7 @@ export default function Home() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [widgetConnected, setWidgetConnected] = useState(false);
+  const [widgetOrigins, setWidgetOrigins] = useState<WidgetOriginStatus[]>([]);
 
   const isAuthed = Boolean(authUser);
 
@@ -326,9 +333,26 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(data?.error || "Failed to load widget status");
       }
-      setWidgetConnected(Boolean(data?.connected));
+      const origins = Array.isArray(data?.origins) ? data.origins : [];
+      const nextOrigins = origins
+        .filter((origin) => origin && typeof origin.siteOrigin === "string")
+        .map((origin) => {
+          const lastSeenAt =
+            typeof origin.lastSeenAt === "string" && origin.lastSeenAt.trim()
+              ? origin.lastSeenAt
+              : null;
+          return {
+            siteOrigin: origin.siteOrigin,
+            lastSeenAt,
+            connected: Boolean(origin.connected),
+            lastSeenLabel: lastSeenAt ? formatRelativeTime(lastSeenAt) : "Jamais",
+          };
+        });
+      setWidgetOrigins(nextOrigins);
+      setWidgetConnected(nextOrigins.some((origin) => origin.connected));
     } catch (error) {
       setWidgetConnected(false);
+      setWidgetOrigins([]);
     }
   };
 
@@ -617,6 +641,7 @@ export default function Home() {
         onNotificationsOpen={handleNotificationsOpen}
         onNotificationsClear={handleNotificationsClear}
         widgetConnected={widgetConnected}
+        widgetOrigins={widgetOrigins}
         user={authUser}
         onLogout={handleLogout}
       />

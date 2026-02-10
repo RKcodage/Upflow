@@ -89,16 +89,25 @@ export async function GET(request: NextRequest) {
     const query: Record<string, string> = { projectId };
     if (siteOrigin && !isAdmin) query.siteOrigin = siteOrigin;
 
-    const latest = await WidgetPingModel.findOne(query).sort({ lastSeenAt: -1 }).lean();
-    const lastSeenAt = latest?.lastSeenAt ? new Date(latest.lastSeenAt).toISOString() : null;
-    const connected = lastSeenAt
-      ? Date.now() - new Date(lastSeenAt).getTime() <= STALE_WINDOW_MS
-      : false;
+    const pings = await WidgetPingModel.find(query).sort({ lastSeenAt: -1 }).lean();
+    const now = Date.now();
+    const origins = pings.map((ping) => {
+      const lastSeenAt = ping.lastSeenAt ? new Date(ping.lastSeenAt).toISOString() : null;
+      const connected = lastSeenAt ? now - new Date(lastSeenAt).getTime() <= STALE_WINDOW_MS : false;
+      return {
+        siteOrigin: ping.siteOrigin,
+        lastSeenAt,
+        connected,
+      };
+    });
+    const latest = origins[0];
+    const connected = origins.some((origin) => origin.connected);
 
     return NextResponse.json({
       connected,
-      lastSeenAt,
+      lastSeenAt: latest?.lastSeenAt ?? null,
       siteOrigin: latest?.siteOrigin ?? null,
+      origins,
     });
   } catch (error) {
     return NextResponse.json(
