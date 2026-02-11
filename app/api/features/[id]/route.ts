@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import FeatureModel from "@/lib/models/Feature";
 import NotificationModel from "@/lib/models/Notification";
+import CommentModel from "@/lib/models/Comment";
 import { verifyProjectAccess } from "@/lib/projectAuth";
 import { getSessionFromRequest } from "@/lib/auth";
 
@@ -93,6 +94,7 @@ export async function DELETE(
 
     await FeatureModel.deleteOne({ _id: id });
     await NotificationModel.deleteMany({ projectId: feature.projectId, featureId: id });
+    await CommentModel.deleteMany({ featureId: id });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

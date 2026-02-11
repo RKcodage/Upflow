@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import FeatureModel from "@/lib/models/Feature";
+import CommentModel from "@/lib/models/Comment";
 import NotificationModel from "@/lib/models/Notification";
 import { verifyProjectAccess } from "@/lib/projectAuth";
 import { getSessionFromRequest } from "@/lib/auth";
@@ -45,6 +46,17 @@ export async function GET(request: NextRequest) {
 
     const sortBy: Record<string, 1 | -1> = sort === "recent" ? { createdAt: -1 } : { votes: -1 };
     const features = await FeatureModel.find(filter).sort(sortBy).lean();
+    const featureIds = features.map((feature) => feature._id.toString());
+    const commentCounts = new Map<string, number>();
+    if (featureIds.length) {
+      const counts = await CommentModel.aggregate([
+        { $match: { featureId: { $in: featureIds } } },
+        { $group: { _id: "$featureId", count: { $sum: 1 } } },
+      ]);
+      counts.forEach((item: { _id: string; count: number }) => {
+        commentCounts.set(item._id, item.count);
+      });
+    }
 
     return NextResponse.json({
       features: features.map((feature) => ({
@@ -56,6 +68,7 @@ export async function GET(request: NextRequest) {
         category: feature.category,
         createdAt: feature.createdAt ? new Date(feature.createdAt).toISOString() : null,
         userVoted: voterId ? feature.upvoters?.includes(voterId) : false,
+        comments: commentCounts.get(feature._id.toString()) ?? 0,
       })),
     });
   } catch (error) {
@@ -125,6 +138,7 @@ export async function POST(request: NextRequest) {
         category: feature.category,
         createdAt: feature.createdAt ? feature.createdAt.toISOString() : null,
         userVoted: shouldUpvote,
+        comments: 0,
       },
     });
   } catch (error) {

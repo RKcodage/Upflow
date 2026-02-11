@@ -5,6 +5,7 @@ import FeatureModel from "@/lib/models/Feature";
 import NotificationModel from "@/lib/models/Notification";
 import ProjectModel from "@/lib/models/Project";
 import WidgetPingModel from "@/lib/models/WidgetPing";
+import CommentModel from "@/lib/models/Comment";
 import { getSessionFromRequest } from "@/lib/auth";
 
 const parseOrigins = (value: unknown) => {
@@ -106,6 +107,7 @@ export async function DELETE(
       FeatureModel.deleteMany({ projectId }),
       NotificationModel.deleteMany({ projectId }),
       WidgetPingModel.deleteMany({ projectId }),
+      CommentModel.deleteMany({ projectId }),
     ]);
 
     return NextResponse.json({ ok: true });
