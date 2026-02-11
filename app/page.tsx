@@ -17,6 +17,7 @@ import FeatureList from "./components/FeatureList";
 import CreateFeatureModal from "./components/CreateFeatureModal";
 import ProjectSettingsModal from "./components/ProjectSettingsModal";
 import DeleteFeatureModal from "./components/DeleteFeatureModal";
+import FeatureCommentsModal from "./components/FeatureCommentsModal";
 
 export interface Feature {
   id: string;
@@ -40,6 +41,7 @@ type ApiFeature = {
   votes: number;
   createdAt?: string | null;
   userVoted?: boolean;
+  comments?: number;
 };
 
 const VISITOR_KEY = "upflow-admin-id";
@@ -92,7 +94,7 @@ const mapApiFeature = (feature: ApiFeature): Feature => {
     status: mapStatus(feature.status),
     category: feature.category,
     votes: feature.votes,
-    comments: 0,
+    comments: typeof feature.comments === "number" ? feature.comments : 0,
     author: "Utilisateur",
     date: createdAt,
     userVote: feature.userVoted ? "up" : null,
@@ -140,6 +142,7 @@ export default function Home() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [widgetConnected, setWidgetConnected] = useState(false);
   const [widgetOrigins, setWidgetOrigins] = useState<WidgetOriginStatus[]>([]);
+  const [commentTarget, setCommentTarget] = useState<Feature | null>(null);
 
   const isAuthed = Boolean(authUser);
 
@@ -555,6 +558,21 @@ export default function Home() {
     setIsDeleteModalOpen(true);
   };
 
+  const handleAddComment = (feature: Feature) => {
+    setCommentTarget(feature);
+  };
+
+  const handleCommentAdded = () => {
+    if (!commentTarget) return;
+    setFeatures((prev) =>
+      prev.map((feature) =>
+        feature.id === commentTarget.id
+          ? { ...feature, comments: feature.comments + 1 }
+          : feature
+      )
+    );
+  };
+
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
@@ -662,6 +680,7 @@ export default function Home() {
           onVote={handleVote}
           onStatusChange={handleStatusChange}
           onDelete={handleDeleteRequest}
+          onAddComment={handleAddComment}
         />
       </div>
 
@@ -682,6 +701,15 @@ export default function Home() {
           isDeleting={isDeleting}
           onClose={handleDeleteClose}
           onConfirm={handleDeleteConfirm}
+        />
+      )}
+
+      {commentTarget && (
+        <FeatureCommentsModal
+          featureId={commentTarget.id}
+          featureTitle={commentTarget.title}
+          onClose={() => setCommentTarget(null)}
+          onCommentAdded={handleCommentAdded}
         />
       )}
     </div>
