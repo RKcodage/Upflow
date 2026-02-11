@@ -12,6 +12,7 @@ interface FeatureListProps {
   onVote: (featureId: string, voteType: "up" | "down") => void;
   onStatusChange: (featureId: string, status: Feature["status"]) => void;
   onDelete: (feature: Feature) => void;
+  onAddComment: (feature: Feature) => void;
 }
 
 export default function FeatureList({
@@ -22,6 +23,7 @@ export default function FeatureList({
   onVote,
   onStatusChange,
   onDelete,
+  onAddComment,
 }: FeatureListProps) {
   // Filter features
   const filteredFeatures = features.filter((feature) => {
@@ -103,6 +105,7 @@ export default function FeatureList({
               onVote={onVote}
               onStatusChange={onStatusChange}
               onDelete={onDelete}
+              onAddComment={onAddComment}
             />
           ))}
 
