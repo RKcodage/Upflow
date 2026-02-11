@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, X } from "lucide-react";
 import DeleteProjectModal from "./DeleteProjectModal";
 
@@ -22,17 +23,16 @@ const STORAGE_PROJECT_KEY = "upflow-admin-project-key";
 const formatOrigins = (origins: string[]) => origins.join("\n");
 
 export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalProps) {
-  const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState(NEW_PROJECT);
   const [projectId, setProjectId] = useState("");
   const [name, setName] = useState("");
   const [allowedOrigins, setAllowedOrigins] = useState("");
   const [publicKey, setPublicKey] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const queryClient = useQueryClient();
 
   const isNew = selectedProject === NEW_PROJECT;
 
@@ -52,32 +52,35 @@ export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalPr
     return `// types/upflow.d.ts\nexport {};\n\ndeclare global {\n  interface Window {\n    UpFlow?: {\n      init: (config: {\n        projectId: string;\n        projectKey?: string;\n        baseUrl?: string;\n        position?: \"bottom-right\" | \"bottom-left\";\n        theme?: \"dark\" | \"light\";\n        accent?: string;\n      }) => void;\n      open: () => void;\n      close: () => void;\n      destroy: () => void;\n    };\n  }\n}\n`;
   }, []);
 
-  const loadProjects = async () => {
-    try {
-      setIsLoading(true);
+  const projectsQuery = useQuery<Project[]>({
+    queryKey: ["projects"],
+    queryFn: async () => {
       const response = await fetch("/api/projects", { cache: "no-store" });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(data?.error || "Impossible de charger les projets");
       }
-      const items = Array.isArray(data.projects) ? data.projects : [];
-      setProjects(items);
-      if (items.length && selectedProject === NEW_PROJECT) {
-        setSelectedProject(items[0].projectId);
-      }
-    } catch (error) {
-      setToast({ type: "error", message: "Impossible de charger les projets" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return Array.isArray(data.projects) ? data.projects : [];
+    },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const projects = projectsQuery.data ?? [];
+  const isLoading = projectsQuery.isLoading && projects.length === 0;
 
   useEffect(() => {
-    void loadProjects();
-  }, []);
+    if (projectsQuery.error) {
+      setToast({ type: "error", message: "Impossible de charger les projets" });
+    }
+  }, [projectsQuery.error]);
 
   useEffect(() => {
     if (selectedProject === NEW_PROJECT) {
+      if (projects.length) {
+        setSelectedProject(projects[0].projectId);
+        return;
+      }
       setProjectId("");
       setName("");
       setAllowedOrigins("");
@@ -152,11 +155,10 @@ export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalPr
       }
 
       const saved = data.project as Project;
-      const nextProjects = isNew
-        ? [saved, ...projects]
-        : projects.map((item) => (item.projectId === saved.projectId ? saved : item));
+      queryClient.setQueryData<Project[]>(["projects"], (prev = []) =>
+        isNew ? [saved, ...prev] : prev.map((item) => (item.projectId === saved.projectId ? saved : item))
+      );
 
-      setProjects(nextProjects);
       setSelectedProject(saved.projectId);
       if (typeof window !== "undefined") {
         window.localStorage.setItem(STORAGE_PROJECT_ID, saved.projectId);
@@ -189,7 +191,7 @@ export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalPr
       }
 
       const nextProjects = projects.filter((item) => item.projectId !== selectedProject);
-      setProjects(nextProjects);
+      queryClient.setQueryData<Project[]>(["projects"], nextProjects);
 
       const nextSelected = nextProjects[0]?.projectId ?? NEW_PROJECT;
       setSelectedProject(nextSelected);
