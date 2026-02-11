@@ -56,6 +56,7 @@ cp .env.example .env.local
 ```
 
 2) Renseigne `MONGODB_URI` et `UPFLOW_AUTH_SECRET` (ex: une clé aléatoire longue).
+   Ajoute aussi la config SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_SECURE`) pour l'envoi des emails de reset.
 
 3) Va sur `http://localhost:3000/signup` pour créer ton compte admin, puis connecte‑toi.
 

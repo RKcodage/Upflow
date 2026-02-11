@@ -34,6 +34,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     user.passwordHash = hashPassword(nextPassword);
+    user.resetTokenHash = undefined;
+    user.resetTokenExpires = undefined;
     await user.save();
 
     const token = createSessionToken({ userId: user._id.toString(), email: user.email });
