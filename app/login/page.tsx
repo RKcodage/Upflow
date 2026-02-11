@@ -69,6 +69,11 @@ export default function LoginPage() {
               onChange={(event) => setPassword(event.target.value)}
               required
             />
+            <div style={{ marginTop: "6px", fontSize: "12px", textAlign: "right" }}>
+              <Link href="/forgot-password" style={{ color: "var(--color-foreground)" }}>
+                Mot de passe oublié ?
+              </Link>
+            </div>
           </div>
 
           {error && (
