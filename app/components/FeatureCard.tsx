@@ -8,9 +8,16 @@ interface FeatureCardProps {
   onVote: (featureId: string, voteType: "up" | "down") => void;
   onStatusChange: (featureId: string, status: Feature["status"]) => void;
   onDelete: (feature: Feature) => void;
+  onAddComment: (feature: Feature) => void;
 }
 
-export default function FeatureCard({ feature, onVote, onStatusChange, onDelete }: FeatureCardProps) {
+export default function FeatureCard({
+  feature,
+  onVote,
+  onStatusChange,
+  onDelete,
+  onAddComment,
+}: FeatureCardProps) {
   const getStatusBadgeClass = (status: Feature["status"]) => {
     switch (status) {
       case "planned":
@@ -154,9 +161,14 @@ export default function FeatureCard({ feature, onVote, onStatusChange, onDelete 
               {feature.category}
             </div>
 
-            <div className="flex items-center" style={{ gap: "6px", color: "var(--color-muted)", fontSize: "13px" }}>
-              <MessageCircle size={14} />
-              <span>{feature.comments} {feature.comments === 1 ? "commentaire" : "commentaires"}</span>
+            <div className="flex items-center btn-ghost" 
+                style={{ gap: "2px", color: "var(--color-muted)", fontSize: "13px", cursor:"pointer" }} 
+                onClick={() => onAddComment(feature)}
+                aria-label="Ajouter un commentaire">
+              <button style={{ padding: "4px 6px"}} >
+                <MessageCircle size={14} />
+              </button>
+              {feature.comments} {feature.comments === 1 ? "commentaire" : "commentaires"}
             </div>
 
             <div className="flex items-center" style={{ gap: "6px", color: "var(--color-muted)", fontSize: "13px" }}>
