@@ -4,6 +4,8 @@ import { NextResponse, type NextRequest } from "next/server";
 const SESSION_COOKIE = "upflow_session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
 const PASSWORD_KEY_LEN = 64;
+const RESET_TOKEN_BYTES = 32;
+const RESET_TOKEN_TTL_MS = 1000 * 60 * 30;
 
 type SessionPayload = {
   sub: string;
@@ -44,6 +46,18 @@ export const verifyPassword = (password: string, storedHash: string) => {
   const stored = Buffer.from(hashHex, "hex");
   const derived = crypto.scryptSync(password, salt, stored.length);
   return safeEqual(stored, derived);
+};
+
+export const hashResetToken = (token: string) =>
+  crypto.createHash("sha256").update(token).digest("hex");
+
+export const createPasswordResetToken = () => {
+  const token = crypto.randomBytes(RESET_TOKEN_BYTES).toString("hex");
+  return {
+    token,
+    tokenHash: hashResetToken(token),
+    expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+  };
 };
 
 export const createSessionToken = (payload: { userId: string; email: string }) => {
