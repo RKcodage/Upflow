@@ -3,6 +3,8 @@ import mongoose, { Schema, type Model } from "mongoose";
 export type UserDocument = mongoose.Document & {
   email: string;
   passwordHash: string;
+  resetTokenHash?: string;
+  resetTokenExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -11,6 +13,8 @@ const UserSchema = new Schema<UserDocument>(
   {
     email: { type: String, required: true, unique: true, index: true },
     passwordHash: { type: String, required: true },
+    resetTokenHash: { type: String },
+    resetTokenExpires: { type: Date },
   },
   { timestamps: true }
 );
