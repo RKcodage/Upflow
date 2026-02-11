@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import FeatureList from "./components/FeatureList";
@@ -248,40 +249,45 @@ export default function Home() {
     return () => window.removeEventListener("upflow:project-change", handler);
   }, [isAuthed]);
 
-  const loadFeatures = async (
-    activeProjectId: string,
-    activeProjectKey: string,
-    activeSiteOrigin: string,
-    voterId: string
-  ) => {
-    try {
-      if (!activeProjectKey && !activeSiteOrigin) {
-        setFeatures([]);
-        return;
-      }
+  const shouldFetchFeatures = Boolean(
+    isAuthed && visitorId && projectId && (projectKey || siteOrigin)
+  );
+
+  const featuresQuery = useQuery({
+    queryKey: ["features", projectId, projectKey, siteOrigin, visitorId],
+    queryFn: async () => {
       const params = new URLSearchParams({
-        projectId: activeProjectId,
-        voterId,
+        projectId,
+        voterId: visitorId ?? "",
       });
-      if (activeProjectKey) params.set("projectKey", activeProjectKey);
-      if (activeSiteOrigin) params.set("siteOrigin", activeSiteOrigin);
+      if (projectKey) params.set("projectKey", projectKey);
+      if (siteOrigin) params.set("siteOrigin", siteOrigin);
 
       const response = await fetch(`/api/features?${params.toString()}`, {
         cache: "no-store",
         headers: { "x-upflow-admin": "1" },
       });
 
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error("Failed to load features");
+        throw new Error(data?.error || "Failed to load features");
       }
 
-      const data = await response.json();
-      const nextFeatures = Array.isArray(data.features) ? data.features.map(mapApiFeature) : [];
-      setFeatures(nextFeatures);
-    } catch (error) {
+      return Array.isArray(data.features) ? data.features.map(mapApiFeature) : [];
+    },
+    enabled: shouldFetchFeatures,
+    refetchInterval: 15000,
+  });
+
+  useEffect(() => {
+    if (!shouldFetchFeatures) {
       setFeatures([]);
+      return;
     }
-  };
+    if (featuresQuery.data) {
+      setFeatures(featuresQuery.data);
+    }
+  }, [featuresQuery.data, shouldFetchFeatures]);
 
   const loadNotifications = async (
     activeProjectId: string,
@@ -363,19 +369,6 @@ export default function Home() {
       setWidgetOrigins([]);
     }
   };
-
-  useEffect(() => {
-    if (!isAuthed || !visitorId || !projectId) return;
-    void loadFeatures(projectId, projectKey, siteOrigin, visitorId);
-  }, [isAuthed, visitorId, projectId, projectKey, siteOrigin]);
-
-  useEffect(() => {
-    if (!isAuthed || !visitorId || !projectId) return;
-    const interval = window.setInterval(() => {
-      void loadFeatures(projectId, projectKey, siteOrigin, visitorId);
-    }, 15000);
-    return () => window.clearInterval(interval);
-  }, [isAuthed, visitorId, projectId, projectKey, siteOrigin]);
 
   useEffect(() => {
     if (!isAuthed || !projectId) return;
