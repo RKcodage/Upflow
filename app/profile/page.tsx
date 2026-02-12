@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ChangePasswordModal from "../components/ChangePasswordModal";
+import DeleteAccountModal from "../components/DeleteAccountModal";
 
 type AuthUser = {
   id: string;
@@ -11,6 +12,14 @@ type AuthUser = {
 };
 
 type StatusMessage = { type: "success" | "error"; message: string } | null;
+
+const STORAGE_PROJECT_ID = "upflow-admin-project-id";
+const STORAGE_PROJECT_KEY = "upflow-admin-project-key";
+
+const getStorageKeys = (userId: string) => ({
+  projectId: `${STORAGE_PROJECT_ID}:${userId}`,
+  projectKey: `${STORAGE_PROJECT_KEY}:${userId}`,
+});
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -23,6 +32,9 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordStatus, setPasswordStatus] = useState<StatusMessage>(null);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -131,6 +143,32 @@ export default function ProfilePage() {
     setPasswordError(null);
   };
 
+  const handleDeleteAccount = async () => {
+    if (!authUser) return;
+    setDeleteError(null);
+    try {
+      setIsDeletingAccount(true);
+      const response = await fetch("/api/auth/account", { method: "DELETE" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Impossible de supprimer le compte.");
+      }
+      if (typeof window !== "undefined") {
+        const storageKeys = getStorageKeys(authUser.id);
+        window.localStorage.removeItem(storageKeys.projectId);
+        window.localStorage.removeItem(storageKeys.projectKey);
+      }
+      router.push("/signup");
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error ? error.message : "Impossible de supprimer le compte."
+      );
+    } finally {
+      setIsDeletingAccount(false);
+      setIsDeleteModalOpen(false);
+    }
+  };
+
   if (!authChecked) {
     return (
       <div className="flex items-center justify-center" style={{ minHeight: "100vh" }}>
@@ -215,6 +253,28 @@ export default function ProfilePage() {
               {passwordStatus.message}
             </div>
           )}
+
+          <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid var(--color-border)" }}>
+            <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--color-danger)", marginBottom: "6px" }}>
+              Zone dangereuse
+            </div>
+            <div style={{ fontSize: "13px", color: "var(--color-muted)", marginBottom: "12px" }}>
+              Supprime définitivement ton compte et toutes les données associées.
+            </div>
+            <button
+              className="btn-secondary"
+              style={{ padding: "10px 16px", background: "var(--color-danger)", cursor: "pointer" }}
+              onClick={() => setIsDeleteModalOpen(true)}
+              disabled={isDeletingAccount}
+            >
+              Supprimer mon compte
+            </button>
+            {deleteError && (
+              <div style={{ color: "var(--color-danger)", fontSize: "13px", marginTop: "10px" }}>
+                {deleteError}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -224,6 +284,14 @@ export default function ProfilePage() {
           error={passwordError}
           onClose={clearPasswordModal}
           onConfirm={handlePasswordChange}
+        />
+      )}
+
+      {isDeleteModalOpen && (
+        <DeleteAccountModal
+          isDeleting={isDeletingAccount}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={handleDeleteAccount}
         />
       )}
     </div>
