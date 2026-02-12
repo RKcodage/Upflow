@@ -106,13 +106,14 @@ export default function Navbar({
               gap: "6px",
             }}
           >
-            <div 
-              style={{ 
-                width: "6px", 
-                height: "6px", 
-                borderRadius: "50%", 
+            <div
+              className={widgetConnected ? "status-pulse" : undefined}
+              style={{
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
                 background: widgetConnected ? "var(--color-success)" : "var(--color-warning)",
-              }} 
+              }}
             />
             <span
               style={{

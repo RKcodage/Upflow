@@ -479,16 +479,17 @@ export default function VoteWidget({
       {/* Toast Notification */}
       {showToast && (
         <div
-          className="toast toast-success animate-slide-up"
+          className="toast toast-success toast-widget-success animate-slide-up"
           style={{
             padding: "14px 20px",
             gap: "10px",
             bottom: isOpen ? "auto" : "100px",
             top: isOpen ? "24px" : "auto",
             right: isOpen ? "460px" : "24px",
+            zIndex: 1001,
           }}
         >
-          <span style={{ fontSize: "14px", fontWeight: 500 }}>{toastMessage}</span>
+          <span style={{ fontSize: "14px", fontWeight: 700 }}>{toastMessage}</span>
         </div>
       )}
 
