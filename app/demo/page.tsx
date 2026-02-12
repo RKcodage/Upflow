@@ -12,7 +12,7 @@
 
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import VoteWidget from "../components/widget/VoteWidget";
@@ -20,15 +20,65 @@ import VoteWidget from "../components/widget/VoteWidget";
 const STORAGE_PROJECT_ID = "upflow-admin-project-id";
 const STORAGE_PROJECT_KEY = "upflow-admin-project-key";
 
+const getStorageKeys = (userId: string) => ({
+  projectId: `${STORAGE_PROJECT_ID}:${userId}`,
+  projectKey: `${STORAGE_PROJECT_KEY}:${userId}`,
+});
+
 function WidgetDemoContent() {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
   const searchParams = useSearchParams();
-  const [projectId, setProjectId] = useState(
-    process.env.NEXT_PUBLIC_UPFLOW_DEMO_PROJECT_ID ?? "demo"
-  );
-  const [projectKey, setProjectKey] = useState(
-    process.env.NEXT_PUBLIC_UPFLOW_DEMO_PROJECT_KEY ?? ""
-  );
+  const [projectId, setProjectId] = useState("");
+  const [projectKey, setProjectKey] = useState("");
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  const loadAuth = useCallback(async () => {
+    try {
+      const response = await fetch("/api/auth/me", { cache: "no-store" });
+      if (!response.ok) {
+        if (isMounted.current) setAuthUserId(null);
+        return;
+      }
+      const data = await response.json().catch(() => ({}));
+      if (isMounted.current) {
+        setAuthUserId(typeof data?.user?.id === "string" ? data.user.id : null);
+      }
+    } catch {
+      if (isMounted.current) setAuthUserId(null);
+    } finally {
+      if (isMounted.current) setAuthChecked(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadAuth();
+  }, [loadAuth]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleFocus = () => {
+      void loadAuth();
+    };
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        void loadAuth();
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [loadAuth]);
 
   useEffect(() => {
     const queryProjectId = searchParams.get("projectId")?.trim() ?? "";
@@ -39,15 +89,55 @@ function WidgetDemoContent() {
       return;
     }
 
-    if (typeof window !== "undefined") {
-      const storedId = window.localStorage.getItem(STORAGE_PROJECT_ID) ?? "";
-      const storedKey = window.localStorage.getItem(STORAGE_PROJECT_KEY) ?? "";
+    if (authUserId && typeof window !== "undefined") {
+      const storageKeys = getStorageKeys(authUserId);
+      const storedId = window.localStorage.getItem(storageKeys.projectId) ?? "";
+      const storedKey = window.localStorage.getItem(storageKeys.projectKey) ?? "";
       if (storedId) {
         setProjectId(storedId);
         setProjectKey(storedKey);
+        return;
       }
     }
-  }, [searchParams]);
+
+    if (authUserId) {
+      const loadProjects = async () => {
+        try {
+          const response = await fetch("/api/projects", { cache: "no-store" });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) return;
+          const items = Array.isArray(data.projects) ? data.projects : [];
+          const demoProject = items.find(
+            (item) =>
+              typeof item?.name === "string" && item.name.toLowerCase() === "demo"
+          );
+          const selected = demoProject ?? items[0];
+          if (!selected?.projectId) return;
+          setProjectId(selected.projectId);
+          setProjectKey((selected.publicKey ?? "").trim());
+          if (typeof window !== "undefined") {
+            const storageKeys = getStorageKeys(authUserId);
+            window.localStorage.setItem(storageKeys.projectId, selected.projectId);
+            if (selected.publicKey) {
+              window.localStorage.setItem(storageKeys.projectKey, selected.publicKey);
+            } else {
+              window.localStorage.removeItem(storageKeys.projectKey);
+            }
+          }
+        } catch {
+          // ignore
+        }
+      };
+
+      void loadProjects();
+      return;
+    }
+
+    if (authChecked && !authUserId) {
+      setProjectId(process.env.NEXT_PUBLIC_UPFLOW_DEMO_PROJECT_ID ?? "demo");
+      setProjectKey(process.env.NEXT_PUBLIC_UPFLOW_DEMO_PROJECT_KEY ?? "");
+    }
+  }, [searchParams, authUserId, authChecked]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#ffffff" }}>
