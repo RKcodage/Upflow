@@ -43,7 +43,9 @@ export default function ProjectSettingsModal({ onClose, userId }: ProjectSetting
 
   const isNew = selectedProject === NEW_PROJECT;
 
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+  const configuredBaseUrl = (process.env.NEXT_PUBLIC_UPFLOW_APP_URL ?? "").trim();
+  const baseUrl =
+    configuredBaseUrl || (typeof window !== "undefined" ? window.location.origin : "");
 
   const htmlSnippet = useMemo(() => {
     if (!projectId || !baseUrl) return "";

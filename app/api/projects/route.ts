@@ -27,16 +27,11 @@ export async function GET(request: NextRequest) {
       { $set: { ownerId: session.sub } }
     );
 
-    let projects = await ProjectModel.find({ ownerId: session.sub })
+    await ensureDemoProjectForUser(session.sub);
+
+    const projects = await ProjectModel.find({ ownerId: session.sub })
       .sort({ createdAt: -1 })
       .lean();
-
-    if (!projects.length) {
-      await ensureDemoProjectForUser(session.sub);
-      projects = await ProjectModel.find({ ownerId: session.sub })
-        .sort({ createdAt: -1 })
-        .lean();
-    }
 
     return NextResponse.json({
       projects: projects.map((project) => ({

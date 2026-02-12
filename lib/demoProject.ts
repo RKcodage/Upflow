@@ -2,11 +2,44 @@ import crypto from "crypto";
 import ProjectModel from "@/lib/models/Project";
 
 const DEMO_PROJECT_ID = "demo";
-const DEMO_ALLOWED_ORIGINS = ["https://upflow--upflow--574qbjcqcwyr.code.run"];
+const DEMO_ALLOWED_ORIGINS = [
+  "https://upflow--upflow--574qbjcqcwyr.code.run",
+  "https://www.upflow.website",
+  "https://upflow.website",
+];
 
 const generatePublicKey = () => `pk_${crypto.randomBytes(16).toString("hex")}`;
 
+const mergeAllowedOrigins = (current: string[] = []) => {
+  const normalized = current.map((entry) => entry.trim()).filter(Boolean);
+  const set = new Set(normalized);
+  let changed = false;
+
+  for (const origin of DEMO_ALLOWED_ORIGINS) {
+    if (!set.has(origin)) {
+      set.add(origin);
+      changed = true;
+    }
+  }
+
+  return { changed, origins: Array.from(set) };
+};
+
 export const ensureDemoProjectForUser = async (userId: string) => {
+  const demoProject = await ProjectModel.findOne({
+    ownerId: userId,
+    name: { $regex: /^demo$/i },
+  });
+
+  if (demoProject) {
+    const { changed, origins } = mergeAllowedOrigins(demoProject.allowedOrigins ?? []);
+    if (changed) {
+      demoProject.allowedOrigins = origins;
+      await demoProject.save();
+    }
+    return demoProject;
+  }
+
   const existing = await ProjectModel.findOne({ ownerId: userId }).lean();
   if (existing) return null;
 
