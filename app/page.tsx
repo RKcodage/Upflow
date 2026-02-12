@@ -10,7 +10,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import FeatureList from "./components/FeatureList";
@@ -18,6 +18,7 @@ import CreateFeatureModal from "./components/CreateFeatureModal";
 import ProjectSettingsModal from "./components/ProjectSettingsModal";
 import DeleteFeatureModal from "./components/DeleteFeatureModal";
 import FeatureCommentsModal from "./components/FeatureCommentsModal";
+import IntegrationHelpModal from "./components/IntegrationHelpModal";
 
 export interface Feature {
   id: string;
@@ -45,6 +46,8 @@ type ApiFeature = {
 };
 
 const VISITOR_KEY = "upflow-admin-id";
+const STORAGE_PROJECT_ID = "upflow-admin-project-id";
+const STORAGE_PROJECT_KEY = "upflow-admin-project-key";
 type ApiNotification = {
   id: string;
   title: string;
@@ -70,6 +73,11 @@ const isWidgetOriginPayload = (
   origin: WidgetOriginPayload
 ): origin is WidgetOriginPayload & { siteOrigin: string } =>
   Boolean(origin && typeof origin.siteOrigin === "string");
+
+const getStorageKeys = (userId: string) => ({
+  projectId: `${STORAGE_PROJECT_ID}:${userId}`,
+  projectKey: `${STORAGE_PROJECT_KEY}:${userId}`,
+});
 
 const generateVisitorId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -123,9 +131,11 @@ const mapToApiStatus = (status: Feature["status"]): ApiFeature["status"] => {
 
 export default function Home() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [features, setFeatures] = useState<Feature[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isProjectsModalOpen, setIsProjectsModalOpen] = useState(false);
+  const [isIntegrationModalOpen, setIsIntegrationModalOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"votes" | "recent">("votes");
   const [visitorId, setVisitorId] = useState<string | null>(null);
@@ -189,16 +199,17 @@ export default function Home() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const fromQuery = params.get("projectId");
-    const storedProjectId = window.localStorage.getItem("upflow-admin-project-id");
+    const storageKeys = authUser ? getStorageKeys(authUser.id) : null;
+    const storedProjectId = storageKeys ? window.localStorage.getItem(storageKeys.projectId) : null;
     const resolved = (fromQuery ?? storedProjectId ?? "").trim();
     setProjectId(resolved || "");
 
     const keyFromQuery = params.get("projectKey");
-    const storedProjectKey = window.localStorage.getItem("upflow-admin-project-key");
+    const storedProjectKey = storageKeys ? window.localStorage.getItem(storageKeys.projectKey) : null;
     setProjectKey((keyFromQuery ?? storedProjectKey ?? "").trim());
 
     setSiteOrigin(window.location.origin);
-  }, [isAuthed]);
+  }, [isAuthed, authUser]);
 
   useEffect(() => {
     if (!isAuthed) return;
@@ -220,11 +231,14 @@ export default function Home() {
         }
         const first = items[0];
         if (first?.projectId) {
-          window.localStorage.setItem("upflow-admin-project-id", first.projectId);
-          if (first.publicKey) {
-            window.localStorage.setItem("upflow-admin-project-key", first.publicKey);
-          } else {
-            window.localStorage.removeItem("upflow-admin-project-key");
+          const storageKeys = authUser ? getStorageKeys(authUser.id) : null;
+          if (storageKeys) {
+            window.localStorage.setItem(storageKeys.projectId, first.projectId);
+            if (first.publicKey) {
+              window.localStorage.setItem(storageKeys.projectKey, first.publicKey);
+            } else {
+              window.localStorage.removeItem(storageKeys.projectKey);
+            }
           }
           setProjectId(first.projectId);
           setProjectKey((first.publicKey ?? "").trim());
@@ -237,20 +251,21 @@ export default function Home() {
     };
 
     void autoSelect();
-  }, [isAuthed, autoSelectAttempted, projectId]);
+  }, [isAuthed, autoSelectAttempted, projectId, authUser]);
 
   useEffect(() => {
     if (!isAuthed) return;
     if (typeof window === "undefined") return;
     const handler = () => {
-      const storedProjectId = window.localStorage.getItem("upflow-admin-project-id");
-      const storedProjectKey = window.localStorage.getItem("upflow-admin-project-key");
+      const storageKeys = authUser ? getStorageKeys(authUser.id) : null;
+      const storedProjectId = storageKeys ? window.localStorage.getItem(storageKeys.projectId) : null;
+      const storedProjectKey = storageKeys ? window.localStorage.getItem(storageKeys.projectKey) : null;
       setProjectId((storedProjectId ?? "").trim());
       setProjectKey((storedProjectKey ?? "").trim());
     };
     window.addEventListener("upflow:project-change", handler);
     return () => window.removeEventListener("upflow:project-change", handler);
-  }, [isAuthed]);
+  }, [isAuthed, authUser]);
 
   const shouldFetchFeatures = Boolean(
     isAuthed && visitorId && projectId && (projectKey || siteOrigin)
@@ -626,9 +641,13 @@ export default function Home() {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
       if (typeof window !== "undefined") {
-        window.localStorage.removeItem("upflow-admin-project-id");
-        window.localStorage.removeItem("upflow-admin-project-key");
+        if (authUser) {
+          const storageKeys = getStorageKeys(authUser.id);
+          window.localStorage.removeItem(storageKeys.projectId);
+          window.localStorage.removeItem(storageKeys.projectKey);
+        }
       }
+      queryClient.clear();
       setAuthUser(null);
       router.push("/login");
     }
@@ -670,6 +689,7 @@ export default function Home() {
           selectedFilter={selectedFilter}
           onFilterChange={setSelectedFilter}
           features={features}
+          onIntegrationClick={() => setIsIntegrationModalOpen(true)}
         />
 
         <FeatureList
@@ -692,7 +712,7 @@ export default function Home() {
       )}
 
       {isProjectsModalOpen && (
-        <ProjectSettingsModal onClose={() => setIsProjectsModalOpen(false)} />
+        <ProjectSettingsModal onClose={() => setIsProjectsModalOpen(false)} userId={authUser.id} />
       )}
 
       {isDeleteModalOpen && deleteTarget && (
@@ -711,6 +731,10 @@ export default function Home() {
           onClose={() => setCommentTarget(null)}
           onCommentAdded={handleCommentAdded}
         />
+      )}
+
+      {isIntegrationModalOpen && (
+        <IntegrationHelpModal onClose={() => setIsIntegrationModalOpen(false)} />
       )}
     </div>
   );
