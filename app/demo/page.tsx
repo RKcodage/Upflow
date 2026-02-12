@@ -20,6 +20,12 @@ import VoteWidget from "../components/widget/VoteWidget";
 const STORAGE_PROJECT_ID = "upflow-admin-project-id";
 const STORAGE_PROJECT_KEY = "upflow-admin-project-key";
 
+type ProjectItem = {
+  projectId?: string;
+  name?: string;
+  publicKey?: string;
+};
+
 const getStorageKeys = (userId: string) => ({
   projectId: `${STORAGE_PROJECT_ID}:${userId}`,
   projectKey: `${STORAGE_PROJECT_KEY}:${userId}`,
@@ -106,9 +112,9 @@ function WidgetDemoContent() {
           const response = await fetch("/api/projects", { cache: "no-store" });
           const data = await response.json().catch(() => ({}));
           if (!response.ok) return;
-          const items = Array.isArray(data.projects) ? data.projects : [];
+          const items: ProjectItem[] = Array.isArray(data.projects) ? data.projects : [];
           const demoProject = items.find(
-            (item) =>
+            (item: ProjectItem) =>
               typeof item?.name === "string" && item.name.toLowerCase() === "demo"
           );
           const selected = demoProject ?? items[0];
