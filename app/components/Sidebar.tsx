@@ -15,9 +15,15 @@ interface SidebarProps {
   selectedFilter: string;
   onFilterChange: (filter: string) => void;
   features: Feature[];
+  onIntegrationClick: () => void;
 }
 
-export default function Sidebar({ selectedFilter, onFilterChange, features }: SidebarProps) {
+export default function Sidebar({
+  selectedFilter,
+  onFilterChange,
+  features,
+  onIntegrationClick,
+}: SidebarProps) {
   const filterItems = [
     { id: "all", label: "Toutes les demandes", icon: LayoutGrid },
     { id: "under-review", label: "En révision", icon: FileSearch },
@@ -129,7 +135,12 @@ export default function Sidebar({ selectedFilter, onFilterChange, features }: Si
               </div>
             </div>
 
-            <div className="card" style={{ padding: "16px" }}>
+            <button
+              type="button"
+              className="card"
+              style={{ padding: "16px", textAlign: "left", cursor: "pointer" }}
+              onClick={onIntegrationClick}
+            >
               <div className="flex items-center" style={{ gap: "12px" }}>
                 <Code size={20} color="var(--color-muted)" />
                 <div>
@@ -141,7 +152,7 @@ export default function Sidebar({ selectedFilter, onFilterChange, features }: Si
                   </div>
                 </div>
               </div>
-            </div>
+            </button>
           </div>
         </div>
       </div>
