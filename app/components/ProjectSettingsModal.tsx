@@ -14,6 +14,7 @@ type Project = {
 
 interface ProjectSettingsModalProps {
   onClose: () => void;
+  userId: string;
 }
 
 const NEW_PROJECT = "__new__";
@@ -22,7 +23,12 @@ const STORAGE_PROJECT_KEY = "upflow-admin-project-key";
 
 const formatOrigins = (origins: string[]) => origins.join("\n");
 
-export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalProps) {
+const getStorageKeys = (userId: string) => ({
+  projectId: `${STORAGE_PROJECT_ID}:${userId}`,
+  projectKey: `${STORAGE_PROJECT_KEY}:${userId}`,
+});
+
+export default function ProjectSettingsModal({ onClose, userId }: ProjectSettingsModalProps) {
   const [selectedProject, setSelectedProject] = useState(NEW_PROJECT);
   const [projectId, setProjectId] = useState("");
   const [name, setName] = useState("");
@@ -33,6 +39,7 @@ export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalPr
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const queryClient = useQueryClient();
+  const storageKeys = getStorageKeys(userId);
 
   const isNew = selectedProject === NEW_PROJECT;
 
@@ -97,11 +104,11 @@ export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalPr
     setPublicKey(project.publicKey ?? "");
 
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_PROJECT_ID, project.projectId);
+      window.localStorage.setItem(storageKeys.projectId, project.projectId);
       if (project.publicKey) {
-        window.localStorage.setItem(STORAGE_PROJECT_KEY, project.publicKey);
+        window.localStorage.setItem(storageKeys.projectKey, project.publicKey);
       } else {
-        window.localStorage.removeItem(STORAGE_PROJECT_KEY);
+        window.localStorage.removeItem(storageKeys.projectKey);
       }
       window.dispatchEvent(new Event("upflow:project-change"));
     }
@@ -161,11 +168,11 @@ export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalPr
 
       setSelectedProject(saved.projectId);
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(STORAGE_PROJECT_ID, saved.projectId);
+        window.localStorage.setItem(storageKeys.projectId, saved.projectId);
         if (saved.publicKey) {
-          window.localStorage.setItem(STORAGE_PROJECT_KEY, saved.publicKey);
+          window.localStorage.setItem(storageKeys.projectKey, saved.publicKey);
         } else {
-          window.localStorage.removeItem(STORAGE_PROJECT_KEY);
+          window.localStorage.removeItem(storageKeys.projectKey);
         }
         window.dispatchEvent(new Event("upflow:project-change"));
         window.dispatchEvent(new Event("upflow:widget-check"));
@@ -197,19 +204,19 @@ export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalPr
       setSelectedProject(nextSelected);
 
       if (typeof window !== "undefined") {
-        const storedProjectId = window.localStorage.getItem(STORAGE_PROJECT_ID);
+        const storedProjectId = window.localStorage.getItem(storageKeys.projectId);
         if (storedProjectId === selectedProject) {
           if (nextSelected !== NEW_PROJECT) {
-            window.localStorage.setItem(STORAGE_PROJECT_ID, nextSelected);
+            window.localStorage.setItem(storageKeys.projectId, nextSelected);
             const nextKey = nextProjects.find((item) => item.projectId === nextSelected)?.publicKey ?? "";
             if (nextKey) {
-              window.localStorage.setItem(STORAGE_PROJECT_KEY, nextKey);
+              window.localStorage.setItem(storageKeys.projectKey, nextKey);
             } else {
-              window.localStorage.removeItem(STORAGE_PROJECT_KEY);
+              window.localStorage.removeItem(storageKeys.projectKey);
             }
           } else {
-            window.localStorage.removeItem(STORAGE_PROJECT_ID);
-            window.localStorage.removeItem(STORAGE_PROJECT_KEY);
+            window.localStorage.removeItem(storageKeys.projectId);
+            window.localStorage.removeItem(storageKeys.projectKey);
           }
           window.dispatchEvent(new Event("upflow:project-change"));
           window.dispatchEvent(new Event("upflow:widget-check"));
@@ -326,7 +333,7 @@ export default function ProjectSettingsModal({ onClose }: ProjectSettingsModalPr
                 <textarea
                   className="textarea"
                   style={{ padding: "10px 14px", minHeight: "120px" }}
-                  placeholder="http://localhost:3000\nhttps://example.com"
+                  placeholder="https://example.com"
                   value={allowedOrigins}
                   onChange={(event) => setAllowedOrigins(event.target.value)}
                   disabled={isProtectedDemoProject}
